@@ -105,6 +105,10 @@ uint8_t layer_state_mask = 1;
 static constexpr uint32_t SOCD_KEY_A = 0x00070004;
 static constexpr uint32_t SOCD_KEY_D = 0x00070007;
 
+// Delay
+static constexpr uint32_t SOCD_MIN_DELAY = 15;  // Ticks (~15ms)
+static constexpr uint32_t SOCD_MAX_DELAY = 35;  // Ticks (~35ms)
+
 // Monotonically increasing counter – advanced once per do_mapping() call
 static uint32_t socd_tick = 0;
 
@@ -112,6 +116,9 @@ static uint32_t socd_tick = 0;
 // 0 means "not currently pressed".
 static uint32_t socd_press_tick_a = 0;
 static uint32_t socd_press_tick_d = 0;
+
+static uint32_t socd_delay_a = SOCD_MIN_DELAY;
+static uint32_t socd_delay_d = SOCD_MIN_DELAY;
 
 // Previous pressed-state, used to detect rising edges
 static bool socd_prev_a = false;
@@ -1400,28 +1407,43 @@ void process_mapping(bool auto_repeat) {
         bool cur_a = (ptr_a != nullptr) && (*ptr_a != 0);
         bool cur_d = (ptr_d != nullptr) && (*ptr_d != 0);
 
-        if (cur_a && !socd_prev_a)
+        if (cur_a && !socd_prev_a) {
             socd_press_tick_a = socd_tick;
-        if (cur_d && !socd_prev_d)
+            // Jitter-Delay: innerhalb des Hardware-Toleranzbereichs
+            socd_delay_a = SOCD_MIN_DELAY +
+                           (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+        }
+        if (cur_d && !socd_prev_d) {
             socd_press_tick_d = socd_tick;
+            socd_delay_d = SOCD_MIN_DELAY +
+                           (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+        }
 
         socd_prev_a = cur_a;
         socd_prev_d = cur_d;
 
         if (cur_a && cur_d) {
             if (socd_press_tick_a >= socd_press_tick_d) {
-                if (ptr_d != nullptr)
-                    *ptr_d = 0;
+                if ((socd_tick - socd_press_tick_a) >= socd_delay_a) {
+                    if (ptr_d != nullptr)
+                        *ptr_d = 0;
+                }
             } else {
-                if (ptr_a != nullptr)
-                    *ptr_a = 0;
+                if ((socd_tick - socd_press_tick_d) >= socd_delay_d) {
+                    if (ptr_a != nullptr)
+                        *ptr_a = 0;
+                }
             }
         }
 
-        if (!cur_a)
+        if (!cur_a) {
             socd_press_tick_a = 0;
-        if (!cur_d)
+            socd_delay_a = SOCD_MIN_DELAY;
+        }
+        if (!cur_d) {
             socd_press_tick_d = 0;
+            socd_delay_d = SOCD_MIN_DELAY;
+        }
     }
 
     if (have_dpad) {
