@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -90,6 +90,34 @@ uint32_t used_state_slots = 0;
 
 std::unordered_map<uint32_t, int32_t> accumulated;  // usage -> relative movement, * 1000
 uint8_t layer_state_mask = 1;
+
+// ---------------------------------------------------------------------------
+// SOCD – Last Input Priority for A (left) and D (right)
+//
+// HID keyboard usage page 0x07:
+//   A = 0x00070004
+//   D = 0x00070007
+//
+// We track which key was pressed most recently.  When both are held
+// simultaneously the older one is suppressed before the report is sent.
+// ---------------------------------------------------------------------------
+// Usage IDs for the two keys
+static constexpr uint32_t SOCD_KEY_A = 0x00070004;
+static constexpr uint32_t SOCD_KEY_D = 0x00070007;
+
+// Monotonically increasing counter – advanced once per do_mapping() call
+static uint32_t socd_tick = 0;
+
+// Timestamp (in ticks) when each key last went from released → pressed.
+// 0 means "not currently pressed".
+static uint32_t socd_press_tick_a = 0;
+static uint32_t socd_press_tick_d = 0;
+
+// Previous pressed-state, used to detect rising edges
+static bool socd_prev_a = false;
+static bool socd_prev_d = false;
+
+// ---------------------------------------------------------------------------
 
 std::vector<int32_t*> relative_usages;  // input_state pointers
 
@@ -1361,6 +1389,39 @@ void process_mapping(bool auto_repeat) {
                 macro_queue.pop();
             }
         }
+    }
+    // SOCD Last Input Priority: A (0x00070004) vs D (0x00070007)
+    {
+        socd_tick++;
+
+        int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
+        int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
+
+        bool cur_a = (ptr_a != nullptr) && (*ptr_a != 0);
+        bool cur_d = (ptr_d != nullptr) && (*ptr_d != 0);
+
+        if (cur_a && !socd_prev_a)
+            socd_press_tick_a = socd_tick;
+        if (cur_d && !socd_prev_d)
+            socd_press_tick_d = socd_tick;
+
+        socd_prev_a = cur_a;
+        socd_prev_d = cur_d;
+
+        if (cur_a && cur_d) {
+            if (socd_press_tick_a >= socd_press_tick_d) {
+                if (ptr_d != nullptr)
+                    *ptr_d = 0;
+            } else {
+                if (ptr_a != nullptr)
+                    *ptr_a = 0;
+            }
+        }
+
+        if (!cur_a)
+            socd_press_tick_a = 0;
+        if (!cur_d)
+            socd_press_tick_d = 0;
     }
 
     if (have_dpad) {
