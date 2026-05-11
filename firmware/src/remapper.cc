@@ -104,7 +104,7 @@ uint8_t layer_state_mask = 1;
 // SOCD Last Input Priority: A vs D  and  W vs S
 static constexpr uint32_t SOCD_KEY_A = 0x00070004;
 static constexpr uint32_t SOCD_KEY_D = 0x00070007;
-static constexpr uint32_t SOCD_KEY_W = 0x00070026;
+static constexpr uint32_t SOCD_KEY_W = 0x0007001A;
 static constexpr uint32_t SOCD_KEY_S = 0x00070016;
 
 // Delay
