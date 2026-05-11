@@ -101,9 +101,11 @@ uint8_t layer_state_mask = 1;
 // We track which key was pressed most recently.  When both are held
 // simultaneously the older one is suppressed before the report is sent.
 // ---------------------------------------------------------------------------
-// Usage IDs for the two keys
+// SOCD Last Input Priority: A vs D  and  W vs S
 static constexpr uint32_t SOCD_KEY_A = 0x00070004;
 static constexpr uint32_t SOCD_KEY_D = 0x00070007;
+static constexpr uint32_t SOCD_KEY_W = 0x00070026;
+static constexpr uint32_t SOCD_KEY_S = 0x00070016;
 
 // Delay
 static constexpr uint32_t SOCD_MIN_DELAY = 15;  // Ticks (~15ms)
@@ -114,15 +116,27 @@ static uint32_t socd_tick = 0;
 
 // Timestamp (in ticks) when each key last went from released → pressed.
 // 0 means "not currently pressed".
+// A/D
 static uint32_t socd_press_tick_a = 0;
 static uint32_t socd_press_tick_d = 0;
+// W/S
+static uint32_t socd_press_tick_w = 0;
+static uint32_t socd_press_tick_s = 0;
 
+// A/D
 static uint32_t socd_delay_a = SOCD_MIN_DELAY;
 static uint32_t socd_delay_d = SOCD_MIN_DELAY;
+// W/S
+static uint32_t socd_delay_w = SOCD_MIN_DELAY;
+static uint32_t socd_delay_s = SOCD_MIN_DELAY;
 
 // Previous pressed-state, used to detect rising edges
+// A/D
 static bool socd_prev_a = false;
 static bool socd_prev_d = false;
+// W/S
+static bool socd_prev_w = false;
+static bool socd_prev_s = false;
 
 // ---------------------------------------------------------------------------
 
@@ -1397,45 +1411,37 @@ void process_mapping(bool auto_repeat) {
             }
         }
     }
-    // SOCD Last Input Priority: A (0x00070004) vs D (0x00070007)
+    // SOCD Last Input Priority: A/D und W/S
     {
         socd_tick++;
 
+        // A vs D
         int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
         int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
-
         bool cur_a = (ptr_a != nullptr) && (*ptr_a != 0);
         bool cur_d = (ptr_d != nullptr) && (*ptr_d != 0);
 
         if (cur_a && !socd_prev_a) {
             socd_press_tick_a = socd_tick;
-            // Jitter-Delay: innerhalb des Hardware-Toleranzbereichs
-            socd_delay_a = SOCD_MIN_DELAY +
-                           (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+            socd_delay_a = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
         }
         if (cur_d && !socd_prev_d) {
             socd_press_tick_d = socd_tick;
-            socd_delay_d = SOCD_MIN_DELAY +
-                           (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+            socd_delay_d = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
         }
-
         socd_prev_a = cur_a;
         socd_prev_d = cur_d;
-
         if (cur_a && cur_d) {
             if (socd_press_tick_a >= socd_press_tick_d) {
-                if ((socd_tick - socd_press_tick_a) >= socd_delay_a) {
+                if ((socd_tick - socd_press_tick_a) >= socd_delay_a)
                     if (ptr_d != nullptr)
                         *ptr_d = 0;
-                }
             } else {
-                if ((socd_tick - socd_press_tick_d) >= socd_delay_d) {
+                if ((socd_tick - socd_press_tick_d) >= socd_delay_d)
                     if (ptr_a != nullptr)
                         *ptr_a = 0;
-                }
             }
         }
-
         if (!cur_a) {
             socd_press_tick_a = 0;
             socd_delay_a = SOCD_MIN_DELAY;
@@ -1443,6 +1449,42 @@ void process_mapping(bool auto_repeat) {
         if (!cur_d) {
             socd_press_tick_d = 0;
             socd_delay_d = SOCD_MIN_DELAY;
+        }
+
+        // W vs S
+        int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
+        int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+        bool cur_w = (ptr_w != nullptr) && (*ptr_w != 0);
+        bool cur_s = (ptr_s != nullptr) && (*ptr_s != 0);
+
+        if (cur_w && !socd_prev_w) {
+            socd_press_tick_w = socd_tick;
+            socd_delay_w = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+        }
+        if (cur_s && !socd_prev_s) {
+            socd_press_tick_s = socd_tick;
+            socd_delay_s = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+        }
+        socd_prev_w = cur_w;
+        socd_prev_s = cur_s;
+        if (cur_w && cur_s) {
+            if (socd_press_tick_w >= socd_press_tick_s) {
+                if ((socd_tick - socd_press_tick_w) >= socd_delay_w)
+                    if (ptr_s != nullptr)
+                        *ptr_s = 0;
+            } else {
+                if ((socd_tick - socd_press_tick_s) >= socd_delay_s)
+                    if (ptr_w != nullptr)
+                        *ptr_w = 0;
+            }
+        }
+        if (!cur_w) {
+            socd_press_tick_w = 0;
+            socd_delay_w = SOCD_MIN_DELAY;
+        }
+        if (!cur_s) {
+            socd_press_tick_s = 0;
+            socd_delay_s = SOCD_MIN_DELAY;
         }
     }
 
