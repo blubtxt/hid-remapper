@@ -1445,16 +1445,14 @@ void process_mapping(bool auto_repeat) {
 
         // ============ FREEZE & COUNTER-TAP TRIGGER ============
         if (cur_mb && !mb_prev_left) {
-            // Maustaste gerade gedrückt
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
 
-            // Zustand speichern für später
             freeze_saved_a = (ptr_a != nullptr) ? *ptr_a : 0;
             freeze_saved_d = (ptr_d != nullptr) ? *ptr_d : 0;
             freeze_saved_w = (ptr_w != nullptr) ? *ptr_w : 0;
             freeze_saved_s = (ptr_s != nullptr) ? *ptr_s : 0;
 
-            // Counter-Strafe: entgegengesetzte Taste antasten
+            // Counter-Strafe
             bool held_a = (ptr_a != nullptr) && (*ptr_a != 0);
             bool held_d = (ptr_d != nullptr) && (*ptr_d != 0);
             bool held_w = (ptr_w != nullptr) && (*ptr_w != 0);
@@ -1471,10 +1469,10 @@ void process_mapping(bool auto_repeat) {
         }
 
         // ============ FREEZE LOGIC ============
+        static bool freeze_was_active = false;  // ← State-Tracker
         bool freeze_active = (socd_tick < mb_freeze_until);
 
         if (freeze_active) {
-            // WASD einfrieren
             if (ptr_a)
                 *ptr_a = 0;
             if (ptr_d)
@@ -1483,8 +1481,10 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
-        } else if (!cur_mb && mb_prev_left) {
-            // Taste gerade losgelassen → Zustand wiederherstellen
+
+            freeze_was_active = true;
+        } else if (freeze_was_active)  // ✅ Freeze gerade beendet
+        {
             if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
                 *ptr_a = freeze_saved_a;
             if (ptr_d && freeze_saved_d != 0 && *ptr_d == 0)
@@ -1493,6 +1493,8 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = freeze_saved_w;
             if (ptr_s && freeze_saved_s != 0 && *ptr_s == 0)
                 *ptr_s = freeze_saved_s;
+
+            freeze_was_active = false;
         }
 
         // ============ STATE UPDATE ============
