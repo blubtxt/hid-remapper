@@ -145,8 +145,13 @@ static constexpr uint32_t MB_HOLD_RELEASE_TICKS = 50;  // ~50ms gehalten → WAS
 static bool mb_prev_left = false;
 static uint32_t mb_freeze_until = 0;
 
+static int32_t freeze_saved_a = 0;
+static int32_t freeze_saved_d = 0;
+static int32_t freeze_saved_w = 0;
+static int32_t freeze_saved_s = 0;
+
 // Counter-Strafe bei Linksklick
-static constexpr uint32_t COUNTER_TAP_TICKS = 5;  // ~3ms Tap-Dauer
+static constexpr uint32_t COUNTER_TAP_TICKS = 5;  // ~5ms Tap-Dauer
 static uint32_t counter_tap_a_until = 0;
 static uint32_t counter_tap_d_until = 0;
 static uint32_t counter_tap_w_until = 0;
@@ -1431,24 +1436,23 @@ void process_mapping(bool auto_repeat) {
         int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
         bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
+        int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
+        int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
+        int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
+        int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+
         if (cur_mb && !mb_prev_left) {
-            // Maustaste gerade gedrückt → einfrieren starten
+            // Maustaste gerade gedrückt → Zustand der gehaltenen Tasten speichern
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
+            freeze_saved_a = (ptr_a != nullptr) ? *ptr_a : 0;
+            freeze_saved_d = (ptr_d != nullptr) ? *ptr_d : 0;
+            freeze_saved_w = (ptr_w != nullptr) ? *ptr_w : 0;
+            freeze_saved_s = (ptr_s != nullptr) ? *ptr_s : 0;
         }
         mb_prev_left = cur_mb;
 
-        // Einfrieren nur aktiv wenn:
-        // - innerhalb der Freeze-Zeit UND
-        // - Maustaste noch nicht länger als HOLD_RELEASE_TICKS gehalten
-        bool mb_held_long = cur_mb &&
-                            (socd_tick >= mb_freeze_until) &&
-                            (socd_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS);
-
-        if (socd_tick < mb_freeze_until || mb_held_long) {
-            int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
-            int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
-            int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
-            int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+        if (socd_tick < mb_freeze_until) {
+            // Initialer Freeze: alle WASD unterdrücken
             if (ptr_a)
                 *ptr_a = 0;
             if (ptr_d)
@@ -1457,6 +1461,16 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
+        } else if (cur_mb && (socd_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS)) {
+            // Maustaste gehalten: nur vorher gehaltene Tasten wiederherstellen
+            if (ptr_a)
+                *ptr_a = freeze_saved_a;
+            if (ptr_d)
+                *ptr_d = freeze_saved_d;
+            if (ptr_w)
+                *ptr_w = freeze_saved_w;
+            if (ptr_s)
+                *ptr_s = freeze_saved_s;
         }
 
         if (cur_mb && !mb_prev_left) {
