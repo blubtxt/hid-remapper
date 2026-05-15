@@ -1471,8 +1471,7 @@ void process_mapping(bool auto_repeat) {
         }
 
         // ============ FREEZE LOGIC ============
-        bool freeze_active = (socd_tick < mb_freeze_until) ||
-                             (cur_mb && socd_tick <= mb_freeze_until + MB_HOLD_RELEASE_TICKS);
+        bool freeze_active = (socd_tick < mb_freeze_until);
 
         if (freeze_active) {
             // WASD einfrieren
