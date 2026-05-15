@@ -1443,54 +1443,18 @@ void process_mapping(bool auto_repeat) {
         int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
         int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
 
+        // ============ FREEZE & COUNTER-TAP TRIGGER ============
         if (cur_mb && !mb_prev_left) {
-            // Maustaste gerade gedrückt → Zustand speichern, Freeze starten
+            // Maustaste gerade gedrückt
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
+
+            // Zustand speichern für später
             freeze_saved_a = (ptr_a != nullptr) ? *ptr_a : 0;
             freeze_saved_d = (ptr_d != nullptr) ? *ptr_d : 0;
             freeze_saved_w = (ptr_w != nullptr) ? *ptr_w : 0;
             freeze_saved_s = (ptr_s != nullptr) ? *ptr_s : 0;
-        }
-
-        bool freeze_active = (socd_tick < mb_freeze_until) ||
-                             (cur_mb && socd_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS);
-
-        bool just_released = (!cur_mb && mb_prev_left);
-        bool time_expired = !freeze_active && mb_prev_left;
-
-        mb_prev_left = cur_mb;
-
-        if (freeze_active) {
-            // WASD einfrieren
-            if (ptr_a)
-                *ptr_a = 0;
-            if (ptr_d)
-                *ptr_d = 0;
-            if (ptr_w)
-                *ptr_w = 0;
-            if (ptr_s)
-                *ptr_s = 0;
-        } else if (just_released || time_expired) {
-            // Wiederherstellen nur wenn Taste beim Klick gehalten war
-            if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
-                *ptr_a = freeze_saved_a;
-            if (ptr_d && freeze_saved_d != 0 && *ptr_d == 0)
-                *ptr_d = freeze_saved_d;
-            if (ptr_w && freeze_saved_w != 0 && *ptr_w == 0)
-                *ptr_w = freeze_saved_w;
-            if (ptr_s && freeze_saved_s != 0 && *ptr_s == 0)
-                *ptr_s = freeze_saved_s;
-        }
-
-        if (cur_mb && !mb_prev_left) {
-            mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
 
             // Counter-Strafe: entgegengesetzte Taste antasten
-            int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
-            int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
-            int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
-            int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
-
             bool held_a = (ptr_a != nullptr) && (*ptr_a != 0);
             bool held_d = (ptr_d != nullptr) && (*ptr_d != 0);
             bool held_w = (ptr_w != nullptr) && (*ptr_w != 0);
@@ -1505,29 +1469,45 @@ void process_mapping(bool auto_repeat) {
             if (held_s)
                 counter_tap_w_until = socd_tick + COUNTER_TAP_TICKS;
         }
-        mb_prev_left = cur_mb;
 
-        // Counter-Tap Ausgabe: entgegengesetzte Taste kurz auf 1 setzen
-        if (socd_tick < counter_tap_a_until) {
-            int32_t* p = get_state_ptr(SOCD_KEY_A, 0);
-            if (p)
-                *p = 1;
+        // ============ FREEZE LOGIC ============
+        bool freeze_active = (socd_tick < mb_freeze_until) ||
+                             (cur_mb && socd_tick <= mb_freeze_until + MB_HOLD_RELEASE_TICKS);
+
+        if (freeze_active) {
+            // WASD einfrieren
+            if (ptr_a)
+                *ptr_a = 0;
+            if (ptr_d)
+                *ptr_d = 0;
+            if (ptr_w)
+                *ptr_w = 0;
+            if (ptr_s)
+                *ptr_s = 0;
+        } else if (!cur_mb && mb_prev_left) {
+            // Taste gerade losgelassen → Zustand wiederherstellen
+            if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
+                *ptr_a = freeze_saved_a;
+            if (ptr_d && freeze_saved_d != 0 && *ptr_d == 0)
+                *ptr_d = freeze_saved_d;
+            if (ptr_w && freeze_saved_w != 0 && *ptr_w == 0)
+                *ptr_w = freeze_saved_w;
+            if (ptr_s && freeze_saved_s != 0 && *ptr_s == 0)
+                *ptr_s = freeze_saved_s;
         }
-        if (socd_tick < counter_tap_d_until) {
-            int32_t* p = get_state_ptr(SOCD_KEY_D, 0);
-            if (p)
-                *p = 1;
-        }
-        if (socd_tick < counter_tap_w_until) {
-            int32_t* p = get_state_ptr(SOCD_KEY_W, 0);
-            if (p)
-                *p = 1;
-        }
-        if (socd_tick < counter_tap_s_until) {
-            int32_t* p = get_state_ptr(SOCD_KEY_S, 0);
-            if (p)
-                *p = 1;
-        }
+
+        // ============ COUNTER-TAP AUSGABE ============
+        if (socd_tick < counter_tap_a_until && (ptr_a = get_state_ptr(SOCD_KEY_A, 0)))
+            *ptr_a = 1;
+        if (socd_tick < counter_tap_d_until && (ptr_d = get_state_ptr(SOCD_KEY_D, 0)))
+            *ptr_d = 1;
+        if (socd_tick < counter_tap_w_until && (ptr_w = get_state_ptr(SOCD_KEY_W, 0)))
+            *ptr_w = 1;
+        if (socd_tick < counter_tap_s_until && (ptr_s = get_state_ptr(SOCD_KEY_S, 0)))
+            *ptr_s = 1;
+
+        // ============ STATE UPDATE ============
+        mb_prev_left = cur_mb;
         else 
         {
             socd_tick++;
