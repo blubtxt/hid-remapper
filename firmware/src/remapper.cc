@@ -1463,15 +1463,15 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
-        } else if (mb_prev_left || socd_tick == mb_freeze_until + MB_HOLD_RELEASE_TICKS) {
-            // Maustaste losgelassen ODER Zeit abgelaufen → Zustand wiederherstellen
-            if (ptr_a)
+        } else if (!cur_mb && mb_prev_left || socd_tick == mb_freeze_until + MB_HOLD_RELEASE_TICKS) {
+            // Nur wiederherstellen wenn Taste noch physisch gedrückt
+            if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
                 *ptr_a = freeze_saved_a;
-            if (ptr_d)
+            if (ptr_d && freeze_saved_d != 0 && *ptr_d == 0)
                 *ptr_d = freeze_saved_d;
-            if (ptr_w)
+            if (ptr_w && freeze_saved_w != 0 && *ptr_w == 0)
                 *ptr_w = freeze_saved_w;
-            if (ptr_s)
+            if (ptr_s && freeze_saved_s != 0 && *ptr_s == 0)
                 *ptr_s = freeze_saved_s;
         }
 
