@@ -1427,6 +1427,7 @@ void process_mapping(bool auto_repeat) {
     }
     // SOCD Last Input Priority: A/D und W/S
     {
+        // Linke Maustaste gedrückt → WASD für FREEZE_TICKS einfrieren
         int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
         bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
@@ -1456,6 +1457,53 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
+        }
+
+        if (cur_mb && !mb_prev_left) {
+            mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
+
+            // Counter-Strafe: entgegengesetzte Taste antasten
+            int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
+            int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
+            int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
+            int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+
+            bool held_a = (ptr_a != nullptr) && (*ptr_a != 0);
+            bool held_d = (ptr_d != nullptr) && (*ptr_d != 0);
+            bool held_w = (ptr_w != nullptr) && (*ptr_w != 0);
+            bool held_s = (ptr_s != nullptr) && (*ptr_s != 0);
+
+            if (held_a)
+                counter_tap_d_until = socd_tick + COUNTER_TAP_TICKS;
+            if (held_d)
+                counter_tap_a_until = socd_tick + COUNTER_TAP_TICKS;
+            if (held_w)
+                counter_tap_s_until = socd_tick + COUNTER_TAP_TICKS;
+            if (held_s)
+                counter_tap_w_until = socd_tick + COUNTER_TAP_TICKS;
+        }
+        mb_prev_left = cur_mb;
+
+        // Counter-Tap Ausgabe: entgegengesetzte Taste kurz auf 1 setzen
+        if (socd_tick < counter_tap_a_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_A, 0);
+            if (p)
+                *p = 1;
+        }
+        if (socd_tick < counter_tap_d_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_D, 0);
+            if (p)
+                *p = 1;
+        }
+        if (socd_tick < counter_tap_w_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_W, 0);
+            if (p)
+                *p = 1;
+        }
+        if (socd_tick < counter_tap_s_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_S, 0);
+            if (p)
+                *p = 1;
         }
         else 
         {
