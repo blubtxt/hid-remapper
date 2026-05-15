@@ -141,11 +141,12 @@ static bool socd_prev_s = false;
 // Linke Maustaste: WASD kurz einfrieren
 static constexpr uint32_t MB_LEFT = 0x00090001;
 static constexpr uint32_t MB_FREEZE_TICKS = 10;  // ~10ms Pause
+static constexpr uint32_t MB_HOLD_RELEASE_TICKS = 50;  // ~50ms gehalten → WASD wieder frei
 static bool mb_prev_left = false;
 static uint32_t mb_freeze_until = 0;
 
 // Counter-Strafe bei Linksklick
-static constexpr uint32_t COUNTER_TAP_TICKS = 3;  // ~3ms Tap-Dauer
+static constexpr uint32_t COUNTER_TAP_TICKS = 5;  // ~3ms Tap-Dauer
 static uint32_t counter_tap_a_until = 0;
 static uint32_t counter_tap_d_until = 0;
 static uint32_t counter_tap_w_until = 0;
@@ -1431,11 +1432,19 @@ void process_mapping(bool auto_repeat) {
         bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
         if (cur_mb && !mb_prev_left) {
+            // Maustaste gerade gedrückt → einfrieren starten
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
         }
         mb_prev_left = cur_mb;
 
-        if (socd_tick < mb_freeze_until) {
+        // Einfrieren nur aktiv wenn:
+        // - innerhalb der Freeze-Zeit UND
+        // - Maustaste noch nicht länger als HOLD_RELEASE_TICKS gehalten
+        bool mb_held_long = cur_mb &&
+                            (socd_tick >= mb_freeze_until) &&
+                            (socd_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS);
+
+        if (socd_tick < mb_freeze_until || mb_held_long) {
             int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
             int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
             int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
@@ -1448,7 +1457,7 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
-        } 
+        }
 
         if (cur_mb && !mb_prev_left) {
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
