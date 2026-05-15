@@ -144,6 +144,7 @@ static constexpr uint32_t MB_FREEZE_TICKS = 10;  // ~10ms Pause
 static constexpr uint32_t MB_HOLD_RELEASE_TICKS = 50;  // ~50ms gehalten → WASD wieder frei
 static bool mb_prev_left = false;
 static uint32_t mb_freeze_until = 0;
+static uint32_t mb_tick = 0;
 
 static int32_t freeze_saved_a = 0;
 static int32_t freeze_saved_d = 0;
@@ -1432,18 +1433,17 @@ void process_mapping(bool auto_repeat) {
     }
     // SOCD Last Input Priority: A/D und W/S
     {
-        // Linke Maustaste gedrückt → WASD für FREEZE_TICKS einfrieren
-        int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
-        bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
+        mb_tick++;
 
         int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
         int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
         int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
         int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+        int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
+        bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
         if (cur_mb && !mb_prev_left) {
-            // Maustaste gerade gedrückt → Zustand der gehaltenen Tasten speichern
-            mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
+            mb_freeze_until = mb_tick + MB_FREEZE_TICKS;
             freeze_saved_a = (ptr_a != nullptr) ? *ptr_a : 0;
             freeze_saved_d = (ptr_d != nullptr) ? *ptr_d : 0;
             freeze_saved_w = (ptr_w != nullptr) ? *ptr_w : 0;
@@ -1451,8 +1451,8 @@ void process_mapping(bool auto_repeat) {
         }
         mb_prev_left = cur_mb;
 
-        if (socd_tick < mb_freeze_until) {
-            // Initialer Freeze: alle WASD unterdrücken
+        if (mb_tick < mb_freeze_until) {
+            // Initialer Freeze: alle WASD auf 0
             if (ptr_a)
                 *ptr_a = 0;
             if (ptr_d)
@@ -1461,8 +1461,8 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
-        } else if (cur_mb && (socd_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS)) {
-            // Maustaste gehalten: nur vorher gehaltene Tasten wiederherstellen
+        } else if (cur_mb && (mb_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS)) {
+            // Maustaste gehalten: gespeicherten Zustand wiederherstellen
             if (ptr_a)
                 *ptr_a = freeze_saved_a;
             if (ptr_d)
@@ -1472,6 +1472,7 @@ void process_mapping(bool auto_repeat) {
             if (ptr_s)
                 *ptr_s = freeze_saved_s;
         }
+        // Nach MB_HOLD_RELEASE_TICKS: input_state[] läuft wieder normal
 
         if (cur_mb && !mb_prev_left) {
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
