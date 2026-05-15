@@ -1433,6 +1433,8 @@ void process_mapping(bool auto_repeat) {
     }
     // SOCD Last Input Priority: A/D und W/S
     {
+        socd_tick++;  // immer erhöhen
+
         int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
         bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
@@ -1450,10 +1452,15 @@ void process_mapping(bool auto_repeat) {
             freeze_saved_s = (ptr_s != nullptr) ? *ptr_s : 0;
         }
 
-        bool in_freeze = (socd_tick < mb_freeze_until) ||
-                         (cur_mb && socd_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS);
+        bool freeze_active = (socd_tick < mb_freeze_until) ||
+                             (cur_mb && socd_tick < mb_freeze_until + MB_HOLD_RELEASE_TICKS);
 
-        if (in_freeze) {
+        bool just_released = (!cur_mb && mb_prev_left);
+        bool time_expired = !freeze_active && mb_prev_left;
+
+        mb_prev_left = cur_mb;
+
+        if (freeze_active) {
             // WASD einfrieren
             if (ptr_a)
                 *ptr_a = 0;
@@ -1463,8 +1470,8 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
-        } else if (!cur_mb && mb_prev_left || socd_tick == mb_freeze_until + MB_HOLD_RELEASE_TICKS) {
-            // Nur wiederherstellen wenn Taste noch physisch gedrückt
+        } else if (just_released || time_expired) {
+            // Wiederherstellen nur wenn Taste beim Klick gehalten war
             if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
                 *ptr_a = freeze_saved_a;
             if (ptr_d && freeze_saved_d != 0 && *ptr_d == 0)
@@ -1474,8 +1481,6 @@ void process_mapping(bool auto_repeat) {
             if (ptr_s && freeze_saved_s != 0 && *ptr_s == 0)
                 *ptr_s = freeze_saved_s;
         }
-
-        mb_prev_left = cur_mb;
 
         if (cur_mb && !mb_prev_left) {
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
