@@ -1433,8 +1433,6 @@ void process_mapping(bool auto_repeat) {
     }
     // SOCD Last Input Priority: A/D und W/S
     {
-        socd_tick++;  // immer erhöhen
-
         int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
         bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
@@ -1444,7 +1442,8 @@ void process_mapping(bool auto_repeat) {
         int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
 
         // ============ FREEZE & COUNTER-TAP TRIGGER ============
-        if (cur_mb && !mb_prev_left) {
+        if (cur_mb && !mb_prev_left) 
+        {
             // Maustaste gerade gedrückt
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
 
@@ -1474,7 +1473,8 @@ void process_mapping(bool auto_repeat) {
         bool freeze_active = (socd_tick < mb_freeze_until) ||
                              (cur_mb && socd_tick <= mb_freeze_until + MB_HOLD_RELEASE_TICKS);
 
-        if (freeze_active) {
+        if (freeze_active) 
+        {
             // WASD einfrieren
             if (ptr_a)
                 *ptr_a = 0;
@@ -1484,7 +1484,9 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
-        } else if (!cur_mb && mb_prev_left) {
+        }
+        else if (!cur_mb && mb_prev_left)
+        {
             // Taste gerade losgelassen → Zustand wiederherstellen
             if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
                 *ptr_a = freeze_saved_a;
@@ -1496,6 +1498,9 @@ void process_mapping(bool auto_repeat) {
                 *ptr_s = freeze_saved_s;
         }
 
+        // ============ STATE UPDATE ============
+        mb_prev_left = cur_mb;
+
         // ============ COUNTER-TAP AUSGABE ============
         if (socd_tick < counter_tap_a_until && (ptr_a = get_state_ptr(SOCD_KEY_A, 0)))
             *ptr_a = 1;
@@ -1505,9 +1510,6 @@ void process_mapping(bool auto_repeat) {
             *ptr_w = 1;
         if (socd_tick < counter_tap_s_until && (ptr_s = get_state_ptr(SOCD_KEY_S, 0)))
             *ptr_s = 1;
-
-        // ============ STATE UPDATE ============
-        mb_prev_left = cur_mb;
         else 
         {
             socd_tick++;
