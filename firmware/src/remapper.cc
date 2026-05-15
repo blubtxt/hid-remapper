@@ -1433,6 +1433,8 @@ void process_mapping(bool auto_repeat) {
     }
     // SOCD Last Input Priority: A/D und W/S
     {
+        socd_tick++;  // ✅ EINMAL am Anfang erhöhen
+
         int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
         bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
@@ -1442,8 +1444,7 @@ void process_mapping(bool auto_repeat) {
         int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
 
         // ============ FREEZE & COUNTER-TAP TRIGGER ============
-        if (cur_mb && !mb_prev_left) 
-        {
+        if (cur_mb && !mb_prev_left) {
             // Maustaste gerade gedrückt
             mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
 
@@ -1473,8 +1474,7 @@ void process_mapping(bool auto_repeat) {
         bool freeze_active = (socd_tick < mb_freeze_until) ||
                              (cur_mb && socd_tick <= mb_freeze_until + MB_HOLD_RELEASE_TICKS);
 
-        if (freeze_active) 
-        {
+        if (freeze_active) {
             // WASD einfrieren
             if (ptr_a)
                 *ptr_a = 0;
@@ -1484,9 +1484,7 @@ void process_mapping(bool auto_repeat) {
                 *ptr_w = 0;
             if (ptr_s)
                 *ptr_s = 0;
-        }
-        else if (!cur_mb && mb_prev_left)
-        {
+        } else if (!cur_mb && mb_prev_left) {
             // Taste gerade losgelassen → Zustand wiederherstellen
             if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
                 *ptr_a = freeze_saved_a;
@@ -1510,13 +1508,11 @@ void process_mapping(bool auto_repeat) {
             *ptr_w = 1;
         if (socd_tick < counter_tap_s_until && (ptr_s = get_state_ptr(SOCD_KEY_S, 0)))
             *ptr_s = 1;
-        else 
-        {
-            socd_tick++;
 
+        // ✅ SOCD LOGIK: Nur wenn NICHT im Counter-Tap-Fenster
+        if (!cur_mb)  // ✅ Nur wenn Maustaste NICHT gedrückt
+        {
             // A vs D
-            int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
-            int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
             bool cur_a = (ptr_a != nullptr) && (*ptr_a != 0);
             bool cur_d = (ptr_d != nullptr) && (*ptr_d != 0);
 
@@ -1551,8 +1547,6 @@ void process_mapping(bool auto_repeat) {
             }
 
             // W vs S
-            int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
-            int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
             bool cur_w = (ptr_w != nullptr) && (*ptr_w != 0);
             bool cur_s = (ptr_s != nullptr) && (*ptr_s != 0);
 
