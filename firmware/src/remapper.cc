@@ -138,6 +138,19 @@ static bool socd_prev_d = false;
 static bool socd_prev_w = false;
 static bool socd_prev_s = false;
 
+// Linke Maustaste: WASD kurz einfrieren
+static constexpr uint32_t MB_LEFT = 0x00090001;
+static constexpr uint32_t MB_FREEZE_TICKS = 10;  // ~10ms Pause
+static bool mb_prev_left = false;
+static uint32_t mb_freeze_until = 0;
+
+// Counter-Strafe bei Linksklick
+static constexpr uint32_t COUNTER_TAP_TICKS = 3;  // ~3ms Tap-Dauer
+static uint32_t counter_tap_a_until = 0;
+static uint32_t counter_tap_d_until = 0;
+static uint32_t counter_tap_w_until = 0;
+static uint32_t counter_tap_s_until = 0;
+
 // ---------------------------------------------------------------------------
 
 std::vector<int32_t*> relative_usages;  // input_state pointers
@@ -1413,78 +1426,151 @@ void process_mapping(bool auto_repeat) {
     }
     // SOCD Last Input Priority: A/D und W/S
     {
-        socd_tick++;
+        // Linke Maustaste gedrückt → WASD für FREEZE_TICKS einfrieren
+        int32_t* ptr_mb = get_state_ptr(MB_LEFT, 0);
+        bool cur_mb = (ptr_mb != nullptr) && (*ptr_mb != 0);
 
-        // A vs D
-        int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
-        int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
-        bool cur_a = (ptr_a != nullptr) && (*ptr_a != 0);
-        bool cur_d = (ptr_d != nullptr) && (*ptr_d != 0);
+        if (cur_mb && !mb_prev_left) {
+            mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
+        }
+        mb_prev_left = cur_mb;
 
-        if (cur_a && !socd_prev_a) {
-            socd_press_tick_a = socd_tick;
-            socd_delay_a = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+        if (socd_tick < mb_freeze_until) {
+            int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
+            int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
+            int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
+            int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+            if (ptr_a)
+                *ptr_a = 0;
+            if (ptr_d)
+                *ptr_d = 0;
+            if (ptr_w)
+                *ptr_w = 0;
+            if (ptr_s)
+                *ptr_s = 0;
+        } 
+
+        if (cur_mb && !mb_prev_left) {
+            mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
+
+            // Counter-Strafe: entgegengesetzte Taste antasten
+            int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
+            int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
+            int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
+            int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+
+            bool held_a = (ptr_a != nullptr) && (*ptr_a != 0);
+            bool held_d = (ptr_d != nullptr) && (*ptr_d != 0);
+            bool held_w = (ptr_w != nullptr) && (*ptr_w != 0);
+            bool held_s = (ptr_s != nullptr) && (*ptr_s != 0);
+
+            if (held_a)
+                counter_tap_d_until = socd_tick + COUNTER_TAP_TICKS;
+            if (held_d)
+                counter_tap_a_until = socd_tick + COUNTER_TAP_TICKS;
+            if (held_w)
+                counter_tap_s_until = socd_tick + COUNTER_TAP_TICKS;
+            if (held_s)
+                counter_tap_w_until = socd_tick + COUNTER_TAP_TICKS;
         }
-        if (cur_d && !socd_prev_d) {
-            socd_press_tick_d = socd_tick;
-            socd_delay_d = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+        mb_prev_left = cur_mb;
+
+        // Counter-Tap Ausgabe: entgegengesetzte Taste kurz auf 1 setzen
+        if (socd_tick < counter_tap_a_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_A, 0);
+            if (p)
+                *p = 1;
         }
-        socd_prev_a = cur_a;
-        socd_prev_d = cur_d;
-        if (cur_a && cur_d) {
-            if (socd_press_tick_a >= socd_press_tick_d) {
-                if ((socd_tick - socd_press_tick_a) >= socd_delay_a)
-                    if (ptr_d != nullptr)
-                        *ptr_d = 0;
-            } else {
-                if ((socd_tick - socd_press_tick_d) >= socd_delay_d)
-                    if (ptr_a != nullptr)
-                        *ptr_a = 0;
+        if (socd_tick < counter_tap_d_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_D, 0);
+            if (p)
+                *p = 1;
+        }
+        if (socd_tick < counter_tap_w_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_W, 0);
+            if (p)
+                *p = 1;
+        }
+        if (socd_tick < counter_tap_s_until) {
+            int32_t* p = get_state_ptr(SOCD_KEY_S, 0);
+            if (p)
+                *p = 1;
+        }
+        else 
+        {
+            socd_tick++;
+
+            // A vs D
+            int32_t* ptr_a = get_state_ptr(SOCD_KEY_A, 0);
+            int32_t* ptr_d = get_state_ptr(SOCD_KEY_D, 0);
+            bool cur_a = (ptr_a != nullptr) && (*ptr_a != 0);
+            bool cur_d = (ptr_d != nullptr) && (*ptr_d != 0);
+
+            if (cur_a && !socd_prev_a) {
+                socd_press_tick_a = socd_tick;
+                socd_delay_a = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
             }
-        }
-        if (!cur_a) {
-            socd_press_tick_a = 0;
-            socd_delay_a = SOCD_MIN_DELAY;
-        }
-        if (!cur_d) {
-            socd_press_tick_d = 0;
-            socd_delay_d = SOCD_MIN_DELAY;
-        }
-
-        // W vs S
-        int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
-        int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
-        bool cur_w = (ptr_w != nullptr) && (*ptr_w != 0);
-        bool cur_s = (ptr_s != nullptr) && (*ptr_s != 0);
-
-        if (cur_w && !socd_prev_w) {
-            socd_press_tick_w = socd_tick;
-            socd_delay_w = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
-        }
-        if (cur_s && !socd_prev_s) {
-            socd_press_tick_s = socd_tick;
-            socd_delay_s = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
-        }
-        socd_prev_w = cur_w;
-        socd_prev_s = cur_s;
-        if (cur_w && cur_s) {
-            if (socd_press_tick_w >= socd_press_tick_s) {
-                if ((socd_tick - socd_press_tick_w) >= socd_delay_w)
-                    if (ptr_s != nullptr)
-                        *ptr_s = 0;
-            } else {
-                if ((socd_tick - socd_press_tick_s) >= socd_delay_s)
-                    if (ptr_w != nullptr)
-                        *ptr_w = 0;
+            if (cur_d && !socd_prev_d) {
+                socd_press_tick_d = socd_tick;
+                socd_delay_d = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
             }
-        }
-        if (!cur_w) {
-            socd_press_tick_w = 0;
-            socd_delay_w = SOCD_MIN_DELAY;
-        }
-        if (!cur_s) {
-            socd_press_tick_s = 0;
-            socd_delay_s = SOCD_MIN_DELAY;
+            socd_prev_a = cur_a;
+            socd_prev_d = cur_d;
+            if (cur_a && cur_d) {
+                if (socd_press_tick_a >= socd_press_tick_d) {
+                    if ((socd_tick - socd_press_tick_a) >= socd_delay_a)
+                        if (ptr_d != nullptr)
+                            *ptr_d = 0;
+                } else {
+                    if ((socd_tick - socd_press_tick_d) >= socd_delay_d)
+                        if (ptr_a != nullptr)
+                            *ptr_a = 0;
+                }
+            }
+            if (!cur_a) {
+                socd_press_tick_a = 0;
+                socd_delay_a = SOCD_MIN_DELAY;
+            }
+            if (!cur_d) {
+                socd_press_tick_d = 0;
+                socd_delay_d = SOCD_MIN_DELAY;
+            }
+
+            // W vs S
+            int32_t* ptr_w = get_state_ptr(SOCD_KEY_W, 0);
+            int32_t* ptr_s = get_state_ptr(SOCD_KEY_S, 0);
+            bool cur_w = (ptr_w != nullptr) && (*ptr_w != 0);
+            bool cur_s = (ptr_s != nullptr) && (*ptr_s != 0);
+
+            if (cur_w && !socd_prev_w) {
+                socd_press_tick_w = socd_tick;
+                socd_delay_w = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+            }
+            if (cur_s && !socd_prev_s) {
+                socd_press_tick_s = socd_tick;
+                socd_delay_s = SOCD_MIN_DELAY + (get_time() % (SOCD_MAX_DELAY - SOCD_MIN_DELAY + 1));
+            }
+            socd_prev_w = cur_w;
+            socd_prev_s = cur_s;
+            if (cur_w && cur_s) {
+                if (socd_press_tick_w >= socd_press_tick_s) {
+                    if ((socd_tick - socd_press_tick_w) >= socd_delay_w)
+                        if (ptr_s != nullptr)
+                            *ptr_s = 0;
+                } else {
+                    if ((socd_tick - socd_press_tick_s) >= socd_delay_s)
+                        if (ptr_w != nullptr)
+                            *ptr_w = 0;
+                }
+            }
+            if (!cur_w) {
+                socd_press_tick_w = 0;
+                socd_delay_w = SOCD_MIN_DELAY;
+            }
+            if (!cur_s) {
+                socd_press_tick_s = 0;
+                socd_delay_s = SOCD_MIN_DELAY;
+            }
         }
     }
 
