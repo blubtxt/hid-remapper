@@ -1501,13 +1501,13 @@ void process_mapping(bool auto_repeat) {
         mb_prev_left = cur_mb;
 
         // ============ COUNTER-TAP AUSGABE ============
-        if (socd_tick < counter_tap_a_until && (ptr_a = get_state_ptr(SOCD_KEY_A, 0)))
+        if (!freeze_active && socd_tick < counter_tap_a_until && (ptr_a = get_state_ptr(SOCD_KEY_A, 0)))
             *ptr_a = 1;
-        if (socd_tick < counter_tap_d_until && (ptr_d = get_state_ptr(SOCD_KEY_D, 0)))
+        if (!freeze_active && socd_tick < counter_tap_d_until && (ptr_d = get_state_ptr(SOCD_KEY_D, 0)))
             *ptr_d = 1;
-        if (socd_tick < counter_tap_w_until && (ptr_w = get_state_ptr(SOCD_KEY_W, 0)))
+        if (!freeze_active && socd_tick < counter_tap_w_until && (ptr_w = get_state_ptr(SOCD_KEY_W, 0)))
             *ptr_w = 1;
-        if (socd_tick < counter_tap_s_until && (ptr_s = get_state_ptr(SOCD_KEY_S, 0)))
+        if (!freeze_active && socd_tick < counter_tap_s_until && (ptr_s = get_state_ptr(SOCD_KEY_S, 0)))
             *ptr_s = 1;
 
         // ✅ SOCD LOGIK: Nur wenn NICHT im Counter-Tap-Fenster
