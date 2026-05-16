@@ -142,8 +142,8 @@ static bool socd_prev_s = false;
 static constexpr uint32_t MB_LEFT = 0x00090001;
 static constexpr uint32_t MB_FREEZE_TICKS = 15;  // ~10ms Pause
 
-static constexpr uint32_t MB_FREEZE_MIN_TICKS = 8; 
-static constexpr uint32_t MB_FREEZE_MAX_TICKS = 12;
+static constexpr uint32_t MB_FREEZE_MIN_TICKS = 10; 
+static constexpr uint32_t MB_FREEZE_MAX_TICKS = 20;
 
 static constexpr uint32_t MB_HOLD_RELEASE_TICKS = 50;  // ~50ms gehalten → WASD wieder frei
 static bool mb_prev_left = false;
@@ -1475,10 +1475,11 @@ void process_mapping(bool auto_repeat) {
         }
 
         // ============ FREEZE LOGIC ============
-        static bool freeze_was_active = false;  // ← State-Tracker
+        static bool freeze_was_active = false;
         bool freeze_active = (socd_tick < mb_freeze_until);
 
         if (freeze_active) {
+            // WASD einfrieren
             if (ptr_a)
                 *ptr_a = 0;
             if (ptr_d)
@@ -1489,8 +1490,8 @@ void process_mapping(bool auto_repeat) {
                 *ptr_s = 0;
 
             freeze_was_active = true;
-        } else if (freeze_was_active)  // ✅ Freeze gerade beendet
-        {
+        } else if (freeze_was_active) {
+            // Freeze gerade beendet → Wiederherstellung
             if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
                 *ptr_a = freeze_saved_a;
             if (ptr_d && freeze_saved_d != 0 && *ptr_d == 0)
@@ -1507,18 +1508,32 @@ void process_mapping(bool auto_repeat) {
         mb_prev_left = cur_mb;
 
         // ============ COUNTER-TAP AUSGABE ============
-        if (!freeze_active && socd_tick < counter_tap_a_until && (ptr_a = get_state_ptr(SOCD_KEY_A, 0)))
-            *ptr_a = 1;
-        if (!freeze_active && socd_tick < counter_tap_d_until && (ptr_d = get_state_ptr(SOCD_KEY_D, 0)))
-            *ptr_d = 1;
-        if (!freeze_active && socd_tick < counter_tap_w_until && (ptr_w = get_state_ptr(SOCD_KEY_W, 0)))
-            *ptr_w = 1;
-        if (!freeze_active && socd_tick < counter_tap_s_until && (ptr_s = get_state_ptr(SOCD_KEY_S, 0)))
-            *ptr_s = 1;
+        // NUR wenn Freeze vorbei ist UND nicht gerade wiederhergestellt
+        if (!freeze_active && !freeze_was_active) {
+            if (socd_tick < counter_tap_a_until) {
+                int32_t* ptr = get_state_ptr(SOCD_KEY_A, 0);
+                if (ptr)
+                    *ptr = 1;
+            }
+            if (socd_tick < counter_tap_d_until) {
+                int32_t* ptr = get_state_ptr(SOCD_KEY_D, 0);
+                if (ptr)
+                    *ptr = 1;
+            }
+            if (socd_tick < counter_tap_w_until) {
+                int32_t* ptr = get_state_ptr(SOCD_KEY_W, 0);
+                if (ptr)
+                    *ptr = 1;
+            }
+            if (socd_tick < counter_tap_s_until) {
+                int32_t* ptr = get_state_ptr(SOCD_KEY_S, 0);
+                if (ptr)
+                    *ptr = 1;
+            }
+        }
 
-        // ✅ SOCD LOGIK: Nur wenn NICHT im Counter-Tap-Fenster
-        if (!cur_mb)  // ✅ Nur wenn Maustaste NICHT gedrückt
-        {
+        // ✅ SOCD LOGIK: Nur wenn Maus nicht gedrückt UND Freeze vorbei
+        if (!cur_mb && !freeze_active && !freeze_was_active) {
             // A vs D
             bool cur_a = (ptr_a != nullptr) && (*ptr_a != 0);
             bool cur_d = (ptr_d != nullptr) && (*ptr_d != 0);
