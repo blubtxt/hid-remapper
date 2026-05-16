@@ -1492,13 +1492,23 @@ void process_mapping(bool auto_repeat) {
             freeze_was_active = true;
         } else if (freeze_was_active) {
             // Freeze gerade beendet → Wiederherstellung
-            if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
+            /* if (ptr_a && freeze_saved_a != 0 && *ptr_a == 0)
                 *ptr_a = freeze_saved_a;
             if (ptr_d && freeze_saved_d != 0 && *ptr_d == 0)
                 *ptr_d = freeze_saved_d;
             if (ptr_w && freeze_saved_w != 0 && *ptr_w == 0)
                 *ptr_w = freeze_saved_w;
             if (ptr_s && freeze_saved_s != 0 && *ptr_s == 0)
+                *ptr_s = freeze_saved_s;*/
+
+             // Maustaste losgelassen → wiederherstellen wenn noch gedrückt
+            if (ptr_a && freeze_saved_a != 0 && *(ptr_a + PREV_STATE_OFFSET) != 0)
+                *ptr_a = freeze_saved_a;
+            if (ptr_d && freeze_saved_d != 0 && *(ptr_d + PREV_STATE_OFFSET) != 0)
+                *ptr_d = freeze_saved_d;
+            if (ptr_w && freeze_saved_w != 0 && *(ptr_w + PREV_STATE_OFFSET) != 0)
+                *ptr_w = freeze_saved_w;
+            if (ptr_s && freeze_saved_s != 0 && *(ptr_s + PREV_STATE_OFFSET) != 0)
                 *ptr_s = freeze_saved_s;
 
             freeze_was_active = false;
