@@ -140,7 +140,7 @@ static bool socd_prev_s = false;
 
 // Linke Maustaste: WASD kurz einfrieren
 static constexpr uint32_t MB_LEFT = 0x00090001;
-static constexpr uint32_t MB_FREEZE_TICKS = 15;  // ~10ms Pause
+//static constexpr uint32_t MB_FREEZE_TICKS = 15;  // ~10ms Pause
 
 static constexpr uint32_t MB_FREEZE_MIN_TICKS = 10; 
 static constexpr uint32_t MB_FREEZE_MAX_TICKS = 20;
