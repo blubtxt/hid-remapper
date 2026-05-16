@@ -143,7 +143,7 @@ static constexpr uint32_t MB_LEFT = 0x00090001;
 //static constexpr uint32_t MB_FREEZE_TICKS = 15;  // ~10ms Pause
 
 static constexpr uint32_t MB_FREEZE_MIN_TICKS = 10; 
-static constexpr uint32_t MB_FREEZE_MAX_TICKS = 20;
+static constexpr uint32_t MB_FREEZE_MAX_TICKS = 30;
 
 static constexpr uint32_t MB_HOLD_RELEASE_TICKS = 50;  // ~50ms gehalten → WASD wieder frei
 static bool mb_prev_left = false;
