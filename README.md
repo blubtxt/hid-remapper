@@ -19,18 +19,18 @@ A configurable USB dongle that remaps inputs from mice, keyboards, and other dev
 
 **SOCD Implementation** - Last Input Priority for conflicting inputs
 - Prevents unwanted key combinations (A+D, W+S)
-- Configurable delay (15-35ms)
+- Configurable delay for different playstyles
 - Independent tracking for movement keys
 
 **Mouse Button + WASD Freeze**
-- Freezes WASD input when left mouse button is pressed (~10ms pause)
+- Freezes WASD input when left mouse button is pressed
 - Enables precise aiming without movement
 - Configurable timing for different games
 
 **Counter-Strafe System**
 - Automatic counter-movement taps after mouse button release
 - Improves precision movement in competitive shooters
-- Sub-5ms tap duration for natural feel
+- Ultra-responsive for natural feel
 
 ## Getting Started
 
