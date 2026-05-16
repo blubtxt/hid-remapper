@@ -142,8 +142,8 @@ static bool socd_prev_s = false;
 static constexpr uint32_t MB_LEFT = 0x00090001;
 //static constexpr uint32_t MB_FREEZE_TICKS = 15;  // ~10ms Pause
 
-static constexpr uint32_t MB_FREEZE_MIN_TICKS = 10; 
-static constexpr uint32_t MB_FREEZE_MAX_TICKS = 30;
+static constexpr uint32_t MB_FREEZE_MIN_TICKS = 20; 
+static constexpr uint32_t MB_FREEZE_MAX_TICKS = 40;
 
 static constexpr uint32_t MB_HOLD_RELEASE_TICKS = 50;  // ~50ms gehalten → WASD wieder frei
 static bool mb_prev_left = false;
@@ -1501,14 +1501,13 @@ void process_mapping(bool auto_repeat) {
             if (ptr_s && freeze_saved_s != 0 && *ptr_s == 0)
                 *ptr_s = freeze_saved_s;*/
 
-             // Maustaste losgelassen → wiederherstellen wenn noch gedrückt
-            if (ptr_a && freeze_saved_a != 0 && *(ptr_a + PREV_STATE_OFFSET) != 0)
+            if (ptr_a && freeze_saved_a != 0 && *ptr_a != 0)
                 *ptr_a = freeze_saved_a;
-            if (ptr_d && freeze_saved_d != 0 && *(ptr_d + PREV_STATE_OFFSET) != 0)
+            if (ptr_d && freeze_saved_d != 0 && *ptr_d != 0)
                 *ptr_d = freeze_saved_d;
-            if (ptr_w && freeze_saved_w != 0 && *(ptr_w + PREV_STATE_OFFSET) != 0)
+            if (ptr_w && freeze_saved_w != 0 && *ptr_w != 0)
                 *ptr_w = freeze_saved_w;
-            if (ptr_s && freeze_saved_s != 0 && *(ptr_s + PREV_STATE_OFFSET) != 0)
+            if (ptr_s && freeze_saved_s != 0 && *ptr_s != 0)
                 *ptr_s = freeze_saved_s;
 
             freeze_was_active = false;
