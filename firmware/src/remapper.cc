@@ -140,7 +140,11 @@ static bool socd_prev_s = false;
 
 // Linke Maustaste: WASD kurz einfrieren
 static constexpr uint32_t MB_LEFT = 0x00090001;
-static constexpr uint32_t MB_FREEZE_TICKS = 10;  // ~10ms Pause
+static constexpr uint32_t MB_FREEZE_TICKS = 15;  // ~10ms Pause
+
+static constexpr uint32_t MB_FREEZE_MIN_TICKS = 8; 
+static constexpr uint32_t MB_FREEZE_MAX_TICKS = 12;
+
 static constexpr uint32_t MB_HOLD_RELEASE_TICKS = 50;  // ~50ms gehalten → WASD wieder frei
 static bool mb_prev_left = false;
 static uint32_t mb_freeze_until = 0;
@@ -1445,7 +1449,9 @@ void process_mapping(bool auto_repeat) {
 
         // ============ FREEZE & COUNTER-TAP TRIGGER ============
         if (cur_mb && !mb_prev_left) {
-            mb_freeze_until = socd_tick + MB_FREEZE_TICKS;
+            // Variabale Freeze-Zeit mit Zufallswert
+            uint32_t random_offset = get_time() % (MB_FREEZE_MAX_TICKS - MB_FREEZE_MIN_TICKS + 1);
+            mb_freeze_until = socd_tick + MB_FREEZE_MIN_TICKS + random_offset;
 
             freeze_saved_a = (ptr_a != nullptr) ? *ptr_a : 0;
             freeze_saved_d = (ptr_d != nullptr) ? *ptr_d : 0;
